@@ -1,0 +1,1235 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sistema de Biblioteca con Metodología Scrum</title>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- FontAwesome Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+.glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); }
+</style>
+</head>
+<body class="bg-slate-100 font-sans min-h-screen flex flex-col text-slate-800">
+<!-- MODAL DE LOGIN / AUTENTICACIÓN -->
+<div id="modal-login" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+<div class="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl relative border border-slate-100">
+<div class="text-center mb-6">
+<div class="inline-flex bg-blue-600 text-white p-3.5 rounded-2xl shadow-lg mb-3"><i class="fa-solid fa-book-bookmark text-2xl"></i></div>
+<h2 class="text-2xl font-bold text-slate-900">BiblioScrum Digital</h2>
+<p class="text-xs text-slate-500 mt-1">Ingresa tus credenciales para acceder al sistema</p>
+</div>
+<!-- Alerta de Error de Autenticación -->
+<div id="login-error" class="hidden mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center space-x-2">
+<i class="fa-solid fa-circle-exclamation text-rose-500 text-sm"></i>
+<span id="login-error-msg">Credenciales inválidas.</span>
+</div>
+<form onsubmit="handleLogin(event)" class="space-y-4">
+<div>
+<label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Correo Electrónico</label>
+<div class="relative">
+<i class="fa-solid fa-envelope absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+<input type="email" id="login-email" required placeholder="usuario@univ.edu" class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition" />
+</div>
+</div>
+<div>
+<label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Contraseña</label>
+<div class="relative">
+<i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+<input type="password" id="login-password" required placeholder="••••••••" class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition" />
+</div>
+</div>
+<button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg hover:shadow-blue-500/25 transition duration-200 text-sm mt-2 flex items-center justify-center space-x-2">
+<i class="fa-solid fa-right-to-bracket"></i>
+<span>Iniciar Sesión</span>
+</button>
+</form>
+<!-- Accesos rápidos de prueba por rol (solo rellenan el correo) -->
+<div class="mt-6 pt-4 border-t border-slate-100">
+<p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 text-center">Prueba rápida con roles demo:</p>
+<div class="grid grid-cols-3 gap-1.5 text-[11px]">
+<button type="button" onclick="fillDemoCredentials('braydenarbey@univ.edu')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-center font-medium transition">👑 Admin / PO</button>
+<button type="button" onclick="fillDemoCredentials('luischavez@univ.edu')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-center font-medium transition">📚 Bibliotecario</button>
+<button type="button" onclick="fillDemoCredentials('carolinanino@univ.edu')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-center font-medium transition">🎓 Estudiante</button>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-slate-100 text-center">
+<p class="text-xs text-slate-400">BiblioScrum Digital • Marco Ágil Scrum</p>
+</div>
+</div>
+</div>
+
+<!-- TOP HEADER -->
+<header class="bg-slate-900 text-white shadow-lg sticky top-0 z-50">
+<div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+<div class="flex items-center space-x-3">
+<div class="bg-blue-600 text-white p-2.5 rounded-xl shadow"><i class="fa-solid fa-book-bookmark text-xl"></i></div>
+<div>
+<h1 class="text-xl font-bold tracking-tight">BiblioScrum Digital</h1>
+<p class="text-xs text-slate-400">Sistema Web de Biblioteca • Marco Ágil Scrum</p>
+</div>
+</div>
+<!-- NAV TABS -->
+<nav class="flex items-center space-x-1 bg-slate-800 p-1.5 rounded-xl text-sm font-medium overflow-x-auto">
+<button onclick="switchTab('scrum')" id="tab-btn-scrum" class="px-4 py-2 rounded-lg transition-all text-white bg-blue-600 shadow shrink-0"><i class="fa-solid fa-kanban mr-2"></i>Tablero Scrum & Sprints</button>
+<button onclick="switchTab('books')" id="tab-btn-books" class="px-4 py-2 rounded-lg transition-all text-slate-300 hover:text-white hover:bg-slate-700 shrink-0"><i class="fa-solid fa-book mr-2"></i>Catálogo (Sprint 2)</button>
+<button onclick="switchTab('loans')" id="tab-btn-loans" class="px-4 py-2 rounded-lg transition-all text-slate-300 hover:text-white hover:bg-slate-700 shrink-0"><i class="fa-solid fa-hand-holding-hand mr-2"></i>Préstamos (Sprint 3)</button>
+<button onclick="switchTab('reports')" id="tab-btn-reports" class="px-4 py-2 rounded-lg transition-all text-slate-300 hover:text-white hover:bg-slate-700 shrink-0"><i class="fa-solid fa-chart-pie mr-2"></i>Reportes (Sprint 4)</button>
+<button onclick="switchTab('users')" id="tab-btn-users" class="px-4 py-2 rounded-lg transition-all text-slate-300 hover:text-white hover:bg-slate-700 shrink-0"><i class="fa-solid fa-users mr-2"></i>Usuarios (Sprint 1)</button>
+</nav>
+<!-- USER PROFILE & LOGOUT -->
+<div class="flex items-center space-x-3">
+<div class="flex items-center space-x-3 bg-slate-800 px-3 py-1.5 rounded-xl text-xs">
+<div class="text-right">
+<span id="current-user-display" class="block text-slate-400 font-semibold">Invitado</span>
+<span id="current-role-name" class="font-bold text-blue-400">Product Owner / Admin</span>
+</div>
+</div>
+<button onclick="handleLogout()" title="Cerrar Sesión" class="bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center space-x-1">
+<i class="fa-solid fa-right-from-bracket"></i>
+<span class="hidden sm:inline">Salir</span>
+</button>
+</div>
+</div>
+</header>
+
+<!-- MAIN CONTAINER -->
+<main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
+<!-- NOTIFICATION TOAST -->
+<div id="toast" class="hidden fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl border-l-4 border-blue-500 flex items-center space-x-3">
+<i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400 text-xl"></i>
+<span id="toast-msg" class="text-sm font-medium">Notificación del sistema</span>
+</div>
+
+<!-- TAB 1: SCRUM BOARD & SPRINTS ROADMAP -->
+<section id="view-scrum" class="space-y-6">
+<!-- SPRINT HEADER CARDS -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-center mb-2">
+<span class="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Sprint 1 • 2 Sem.</span>
+<span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Completado</span>
+</div>
+<h3 class="font-bold text-slate-800">Módulo de Usuarios</h3>
+<p class="text-xs text-slate-500 mt-1">Registro, Inicio de sesión, Roles (HU1 - 3 Puntos)</p>
+</div>
+<div class="mt-3 pt-3 border-t border-slate-100 flex justify-between text-xs text-slate-600">
+<span>Velocidad: 3 pts</span>
+<button onclick="switchTab('users')" class="text-blue-600 hover:underline font-semibold">Probar Módulo &rarr;</button>
+</div>
+</div>
+<div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-center mb-2">
+<span class="text-xs font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">Sprint 2 • 2 Sem.</span>
+<span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Completado</span>
+</div>
+<h3 class="font-bold text-slate-800">Catálogo de Libros</h3>
+<p class="text-xs text-slate-500 mt-1">Alta de libros, Búsqueda, Filtros (HU2, HU3 - 8 Puntos)</p>
+</div>
+<div class="mt-3 pt-3 border-t border-slate-100 flex justify-between text-xs text-slate-600">
+<span>Velocidad: 8 pts</span>
+<button onclick="switchTab('books')" class="text-blue-600 hover:underline font-semibold">Probar Módulo &rarr;</button>
+</div>
+</div>
+<div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between border-l-4 border-l-amber-500">
+<div>
+<div class="flex justify-between items-center mb-2">
+<span class="text-xs font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded">Sprint 3 • 2 Sem.</span>
+<span id="sprint3-badge" class="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">En Progreso</span>
+</div>
+<h3 class="font-bold text-slate-800">Préstamos y Devoluciones</h3>
+<p class="text-xs text-slate-500 mt-1">Solicitudes, Control stock, Devolución (HU4 - 8 Puntos)</p>
+</div>
+<div class="mt-3 pt-3 border-t border-slate-100 flex justify-between text-xs text-slate-600">
+<span>Velocidad: 8 pts</span>
+<button onclick="switchTab('loans')" class="text-blue-600 hover:underline font-semibold">Probar Módulo &rarr;</button>
+</div>
+</div>
+<div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-center mb-2">
+<span class="text-xs font-bold uppercase tracking-wider text-purple-600 bg-purple-50 px-2 py-0.5 rounded">Sprint 4 • 2 Sem.</span>
+<span class="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">Pendiente</span>
+</div>
+<h3 class="font-bold text-slate-800">Reportes e Historial</h3>
+<p class="text-xs text-slate-500 mt-1">Dashboard, Estadísticas, Historial (HU5, HU6 - 8 Puntos)</p>
+</div>
+<div class="mt-3 pt-3 border-t border-slate-100 flex justify-between text-xs text-slate-600">
+<span>Velocidad: 8 pts</span>
+<button onclick="switchTab('reports')" class="text-blue-600 hover:underline font-semibold">Probar Módulo &rarr;</button>
+</div>
+</div>
+</div>
+
+<!-- KANBAN BOARD -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+<div class="flex flex-wrap justify-between items-center mb-6 gap-4">
+<div>
+<h2 class="text-lg font-bold text-slate-900 flex items-center"><i class="fa-solid fa-list-check text-blue-600 mr-2"></i>Tablero Kanban del Proyecto Biblioteca</h2>
+<p class="text-xs text-slate-500">Seguimiento en tiempo real del Backlog e Historias de Usuario</p>
+</div>
+<div class="flex items-center space-x-2">
+<button onclick="simulateDailyScrum()" class="bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow transition"><i class="fa-solid fa-comments text-amber-400 mr-1.5"></i>Simular Daily Scrum (15 min)</button>
+</div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="kanban-cols">
+<!-- BACKLOG / POR HACER -->
+<div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+<div class="flex justify-between items-center mb-3 px-1">
+<span class="font-bold text-xs text-slate-700 uppercase tracking-wider">Por Hacer (To Do)</span>
+<span class="bg-slate-200 text-slate-700 text-xs px-2 py-0.5 rounded-full font-bold">2</span>
+</div>
+<div class="space-y-3">
+<div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm hover:shadow transition">
+<div class="flex justify-between text-xs mb-1"><span class="font-bold text-blue-600">HU5</span><span class="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded text-[10px] font-bold">5 Pts • Fib</span></div>
+<h4 class="font-bold text-sm text-slate-800">Generación de Reportes</h4>
+<p class="text-xs text-slate-500 mt-1">Como administrador quiero exportar reportes de préstamos y mora.</p>
+<div class="mt-2 text-[11px] text-slate-400 flex justify-between items-center"><span>Sprint 4</span><span class="bg-slate-100 px-1.5 py-0.5 rounded">Prioridad Media</span></div>
+</div>
+<div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm hover:shadow transition">
+<div class="flex justify-between text-xs mb-1"><span class="font-bold text-blue-600">HU6</span><span class="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded text-[10px] font-bold">3 Pts • Fib</span></div>
+<h4 class="font-bold text-sm text-slate-800">Historial de Usuario</h4>
+<p class="text-xs text-slate-500 mt-1">Como estudiante quiero ver todos mis préstamos pasados.</p>
+<div class="mt-2 text-[11px] text-slate-400 flex justify-between items-center"><span>Sprint 4</span><span class="bg-slate-100 px-1.5 py-0.5 rounded">Prioridad Media</span></div>
+</div>
+</div>
+</div>
+
+<!-- EN PROGRESO -->
+<div class="bg-amber-50/50 p-3 rounded-xl border border-amber-200">
+<div class="flex justify-between items-center mb-3 px-1">
+<span class="font-bold text-xs text-amber-800 uppercase tracking-wider">En Progreso (In Progress)</span>
+<span id="in-progress-count" class="bg-amber-200 text-amber-900 text-xs px-2 py-0.5 rounded-full font-bold">1</span>
+</div>
+<div class="space-y-3" id="in-progress-col">
+<div id="card-hu4" class="bg-white p-3.5 rounded-xl border border-amber-200 shadow-sm border-l-4 border-l-amber-500">
+<div class="flex justify-between text-xs mb-1"><span class="font-bold text-blue-600">HU4</span><span class="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded text-[10px] font-bold">8 Pts • Fib</span></div>
+<h4 class="font-bold text-sm text-slate-800">Préstamos y Devoluciones</h4>
+<p class="text-xs text-slate-500 mt-1">Como lector quiero solicitar libros y registrarlos cuando los devuelva.</p>
+<div class="mt-2 text-[11px] text-slate-400 flex justify-between items-center">
+<span class="text-amber-700 font-medium">Sprint 3 (Activo)</span>
+<button onclick="completeHU4()" id="btn-complete-hu4" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold px-2 py-1 rounded shadow transition">Completar HU4 &rarr;</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- EN PRUEBAS (QA) -->
+<div class="bg-purple-50/50 p-3 rounded-xl border border-purple-200">
+<div class="flex justify-between items-center mb-3 px-1">
+<span class="font-bold text-xs text-purple-800 uppercase tracking-wider">Pruebas / Testing</span>
+<span class="bg-purple-200 text-purple-900 text-xs px-2 py-0.5 rounded-full font-bold">1</span>
+</div>
+<div class="space-y-3">
+<div class="bg-white p-3.5 rounded-xl border border-purple-200 shadow-sm border-l-4 border-l-purple-500">
+<div class="flex justify-between text-xs mb-1"><span class="font-bold text-blue-600">HU3</span><span class="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded text-[10px] font-bold">3 Pts • Fib</span></div>
+<h4 class="font-bold text-sm text-slate-800">Motor de Búsqueda</h4>
+<p class="text-xs text-slate-500 mt-1">Filtro instantáneo por título, autor y disponibilidad.</p>
+<div class="mt-2 text-[11px] text-slate-400 flex justify-between items-center"><span>Sprint 2</span><span class="bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-semibold">Validando QA</span></div>
+</div>
+</div>
+</div>
+
+<!-- FINALIZADO (DONE) -->
+<div class="bg-emerald-50/50 p-3 rounded-xl border border-emerald-200">
+<div class="flex justify-between items-center mb-3 px-1">
+<span class="font-bold text-xs text-emerald-800 uppercase tracking-wider">Finalizado (Done)</span>
+<span id="done-count" class="bg-emerald-200 text-emerald-900 text-xs px-2 py-0.5 rounded-full font-bold">2</span>
+</div>
+<div class="space-y-3" id="done-col">
+<div class="bg-white p-3.5 rounded-xl border border-emerald-200 shadow-sm border-l-4 border-l-emerald-500">
+<div class="flex justify-between text-xs mb-1"><span class="font-bold text-blue-600">HU1</span><span class="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded text-[10px] font-bold">3 Pts</span></div>
+<h4 class="font-bold text-sm text-slate-800">Registro & Autenticación</h4>
+<p class="text-xs text-slate-500 mt-1">Módulo de usuarios y roles diferenciados.</p>
+<div class="mt-2 text-[11px] text-emerald-600 font-semibold flex justify-between items-center"><span>Sprint 1</span><i class="fa-solid fa-circle-check"></i></div>
+</div>
+<div class="bg-white p-3.5 rounded-xl border border-emerald-200 shadow-sm border-l-4 border-l-emerald-500">
+<div class="flex justify-between text-xs mb-1"><span class="font-bold text-blue-600">HU2</span><span class="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded text-[10px] font-bold">5 Pts</span></div>
+<h4 class="font-bold text-sm text-slate-800">Gestión de Catálogo (CRUD)</h4>
+<p class="text-xs text-slate-500 mt-1">Permite a los administradores registrar libros.</p>
+<div class="mt-2 text-[11px] text-emerald-600 font-semibold flex justify-between items-center"><span>Sprint 2</span><i class="fa-solid fa-circle-check"></i></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- TAB 2: BOOKS CATALOG (SPRINT 2) -->
+<section id="view-books" class="hidden space-y-6">
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+<div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+<div>
+<div class="flex items-center space-x-2">
+<span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-0.5 rounded-full">Resultado de Sprint 2</span>
+<h2 class="text-xl font-bold text-slate-900">Catálogo de Libros</h2>
+</div>
+<p class="text-xs text-slate-500 mt-0.5">Búsqueda, filtro por categoría y administración de inventario</p>
+</div>
+<div class="flex items-center space-x-3 w-full md:w-auto">
+<div class="relative flex-grow md:w-72">
+<i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-sm"></i>
+<input type="text" id="search-book-input" onkeyup="filterBooks()" placeholder="Buscar título, autor, ISBN..." class="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+</div>
+<button id="btn-add-book" onclick="openAddBookModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow transition flex items-center shrink-0"><i class="fa-solid fa-plus mr-2"></i>Nuevo Libro</button>
+</div>
+</div>
+<!-- BOOKS GRID -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="books-grid">
+<!-- JavaScript will populate books dynamically -->
+</div>
+</div>
+</section>
+
+<!-- TAB 3: LOANS MANAGEMENT (SPRINT 3) -->
+<section id="view-loans" class="hidden space-y-6">
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+<div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+<div>
+<div class="flex items-center space-x-2">
+<span class="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-0.5 rounded-full">Resultado de Sprint 3</span>
+<h2 class="text-xl font-bold text-slate-900">Módulo de Préstamos y Devoluciones</h2>
+</div>
+<p class="text-xs text-slate-500 mt-0.5">Control de ejemplares entregados a estudiantes y fecha límite</p>
+</div>
+<button id="btn-new-loan" onclick="openNewLoanModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow transition flex items-center"><i class="fa-solid fa-handshake mr-2"></i>Registrar Nuevo Préstamo</button>
+</div>
+<!-- ACTIVE LOANS TABLE -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+<th class="p-3">ID / Código</th>
+<th class="p-3">Libro Solicitado</th>
+<th class="p-3">Usuario / Estudiante</th>
+<th class="p-3">Fecha Préstamo</th>
+<th class="p-3">Estado</th>
+<th class="p-3 text-right">Acción</th>
+</tr>
+</thead>
+<tbody id="loans-table-body" class="divide-y divide-slate-100 text-sm">
+<!-- JS dynamic insertion -->
+</tbody>
+</table>
+</div>
+</div>
+</section>
+
+<!-- TAB 4: REPORTS & DASHBOARD (SPRINT 4) -->
+<section id="view-reports" class="hidden space-y-6">
+<!-- STATS CARDS -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
+<div class="p-3.5 bg-blue-50 text-blue-600 rounded-xl"><i class="fa-solid fa-book-open text-2xl"></i></div>
+<div>
+<p class="text-xs text-slate-400 font-semibold uppercase">Total Libros</p>
+<h3 id="stat-total-books" class="text-2xl font-extrabold text-slate-800">0</h3>
+</div>
+</div>
+<div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
+<div class="p-3.5 bg-amber-50 text-amber-600 rounded-xl"><i class="fa-solid fa-hand-holding text-2xl"></i></div>
+<div>
+<p class="text-xs text-slate-400 font-semibold uppercase">Préstamos Activos</p>
+<h3 id="stat-active-loans" class="text-2xl font-extrabold text-slate-800">0</h3>
+</div>
+</div>
+<div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
+<div class="p-3.5 bg-emerald-50 text-emerald-600 rounded-xl"><i class="fa-solid fa-users text-2xl"></i></div>
+<div>
+<p class="text-xs text-slate-400 font-semibold uppercase">Usuarios Registrados</p>
+<h3 id="stat-total-users" class="text-2xl font-extrabold text-slate-800">0</h3>
+</div>
+</div>
+<div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
+<div class="p-3.5 bg-purple-50 text-purple-600 rounded-xl"><i class="fa-solid fa-bolt text-2xl"></i></div>
+<div>
+<p class="text-xs text-slate-400 font-semibold uppercase">Velocidad Scrum</p>
+<h3 class="text-2xl font-extrabold text-slate-800">27 <span class="text-xs font-normal text-slate-500">Pts/Proyecto</span></h3>
+</div>
+</div>
+</div>
+<!-- CHARTS SECTION -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+<h3 class="font-bold text-slate-800 mb-4 flex items-center"><i class="fa-solid fa-chart-column text-blue-600 mr-2"></i>Préstamos por Categoría de Libro</h3>
+<div class="h-64 flex justify-center items-center"><canvas id="categoryChart"></canvas></div>
+</div>
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+<h3 class="font-bold text-slate-800 mb-4 flex items-center"><i class="fa-solid fa-chart-line text-emerald-600 mr-2"></i>Burn Down Chart de Puntos Scrum</h3>
+<div class="h-64 flex justify-center items-center"><canvas id="burndownChart"></canvas></div>
+</div>
+</div>
+</section>
+
+<!-- TAB 5: USERS MANAGEMENT (SPRINT 1) -->
+<section id="view-users" class="hidden space-y-6">
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+<div class="flex justify-between items-center mb-6">
+<div>
+<span class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-0.5 rounded-full">Resultado de Sprint 1</span>
+<h2 class="text-xl font-bold text-slate-900 mt-1">Gestión de Usuarios y Roles</h2>
+</div>
+<button id="btn-add-user" onclick="openAddUserModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow transition"><i class="fa-solid fa-user-plus mr-2"></i>Nuevo Usuario</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="users-grid">
+<!-- JS dynamic insertion -->
+</div>
+</div>
+</section>
+</main>
+
+<!-- MODAL: ADD BOOK -->
+<div id="modal-add-book" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+<div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+<button onclick="closeModal('modal-add-book')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+<h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center"><i class="fa-solid fa-book text-blue-600 mr-2"></i>Registrar Nuevo Libro</h3>
+<form id="form-add-book" onsubmit="handleAddBook(event)" class="space-y-4">
+<div>
+<label class="block text-xs font-bold text-slate-600 mb-1">Título del Libro</label>
+<input type="text" id="new-book-title" required class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500" />
+</div>
+<div>
+<label class="block text-xs font-bold text-slate-600 mb-1">Autor</label>
+<input type="text" id="new-book-author" required class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500" />
+</div>
+<div class="grid grid-cols-2 gap-3">
+<div>
+<label class="block text-xs font-bold text-slate-600 mb-1">Categoría</label>
+<select id="new-book-category" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500">
+<option value="Ingeniería">Ingeniería</option>
+<option value="Literatura">Literatura</option>
+<option value="Ciencias">Ciencias</option>
+<option value="Historia">Historia</option>
+</select>
+</div>
+<div>
+<label class="block text-xs font-bold text-slate-600 mb-1">Copias Disponibles</label>
+<input type="number" id="new-book-copies" min="1" value="3" required class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500" />
+</div>
+</div>
+<div class="pt-2 flex justify-end space-x-2">
+<button type="button" onclick="closeModal('modal-add-book')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl font-medium">Cancelar</button>
+<button type="submit" class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow">Guardar Libro</button>
+</div>
+</form>
+</div>
+</div>
+
+<!-- MODAL: NEW LOAN -->
+<div id="modal-new-loan" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+<div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+<button onclick="closeModal('modal-new-loan')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+<h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center"><i class="fa-solid fa-handshake text-emerald-600 mr-2"></i>Registrar Préstamo de Libro</h3>
+<form id="form-new-loan" onsubmit="handleNewLoan(event)" class="space-y-4">
+<div>
+<label class="block text-xs font-bold text-slate-600 mb-1">Seleccionar Libro</label>
+<select id="loan-book-select" required class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500">
+<!-- Dynamic populating -->
+</select>
+</div>
+<div>
+<label class="block text-xs font-bold text-slate-600 mb-1">Seleccionar Estudiante / Usuario</label>
+<select id="loan-user-select" required class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500">
+<!-- Dynamic populating -->
+</select>
+</div>
+<div class="pt-2 flex justify-end space-x-2">
+<button type="button" onclick="closeModal('modal-new-loan')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl font-medium">Cancelar</button>
+<button type="submit" class="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow">Aprobar Préstamo</button>
+</div>
+</form>
+</div>
+</div>
+
+<!-- MODAL: ADD USER -->
+<div id="modal-add-user" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+<div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+<button onclick="closeModal('modal-add-user')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+<h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center"><i class="fa-solid fa-user-plus text-blue-600 mr-2"></i>Registrar Nuevo Usuario</h3>
+<form id="form-add-user" onsubmit="handleAddUser(event)" class="space-y-4">
+<div>
+<label class="block text-xs font-bold text-slate-600 mb-1">Nombre Completo</label>
+<input type="text" id="new-user-name" required class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500" />
+</div>
+<div>
+<label class="block text-xs font-bold text-slate-600 mb-1">Correo Electrónico</label>
+<input type="email" id="new-user-email" required class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500" />
+</div>
+<div>
+<label class="block text-xs font-bold text-slate-600 mb-1">Contraseña Inicial</label>
+<input type="password" id="new-user-password" required minlength="6" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500" />
+</div>
+<div>
+<label class="block text-xs font-bold text-slate-600 mb-1">Rol</label>
+<select id="new-user-role" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500">
+<option value="Estudiante">Estudiante</option>
+<option value="Docente">Docente</option>
+<option value="Product Owner / Coord.">Product Owner / Coord.</option>
+<option value="Bibliotecario">Bibliotecario</option>
+</select>
+</div>
+<div class="pt-2 flex justify-end space-x-2">
+<button type="button" onclick="closeModal('modal-add-user')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl font-medium">Cancelar</button>
+<button type="submit" class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow">Guardar Usuario</button>
+</div>
+</form>
+</div>
+</div>
+
+<!-- MODAL: DAILY SCRUM DIALOG -->
+<div id="modal-daily" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+<div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl relative border-t-4 border-amber-500">
+<button onclick="closeModal('modal-daily')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+<div class="flex items-center space-x-3 mb-4">
+<div class="p-2.5 bg-amber-100 text-amber-700 rounded-xl"><i class="fa-solid fa-comments text-xl"></i></div>
+<div>
+<h3 class="text-lg font-bold text-slate-900">Simulación Daily Scrum (15 min)</h3>
+<p class="text-xs text-slate-500">Sincronización diaria del equipo de desarrollo de la biblioteca</p>
+</div>
+</div>
+<div class="space-y-3 my-4 max-h-72 overflow-y-auto pr-1">
+<div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+<p class="font-bold text-blue-600 mb-1">💻 Backend Dev (Juan):</p>
+<p class="text-slate-700">"Ayer completé la API REST para el control de inventario del Sprint 2. Hoy estoy ajustando los endpoints de devolución de libros para el Sprint 3."</p>
+</div>
+<div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+<p class="font-bold text-emerald-600 mb-1">🎨 Frontend Dev (Sofía):</p>
+<p class="text-slate-700">"Ayer integré la búsqueda en tiempo real de libros. Hoy conectaré la tabla de préstamos activos con la API."</p>
+</div>
+<div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs">
+<p class="font-bold text-amber-800 mb-1">⚠ QA Tester (Carlos):</p>
+<p class="text-slate-700">"¿Impedimentos? Detecté un caso borde cuando un libro sin stock es solicitado simultáneamente. Lo estamos corrigiendo."</p>
+</div>
+</div>
+<div class="pt-2 flex justify-end">
+<button onclick="closeModal('modal-daily')" class="px-5 py-2 text-sm bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow">Entendido, Continuar Sprint</button>
+</div>
+</div>
+</div>
+
+<!-- FIREBASE: AUTHENTICATION + FIRESTORE -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import {
+  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword,
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import {
+  getFirestore, collection, onSnapshot, doc, getDoc, getDocs, setDoc, deleteDoc,
+  runTransaction, query, where, writeBatch,
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDma90XjDdvla4Onp8-TLqfmu8mJGLYfx8",
+  authDomain: "biblioteca-4ee62.firebaseapp.com",
+  projectId: "biblioteca-4ee62",
+  storageBucket: "biblioteca-4ee62.firebasestorage.app",
+  messagingSenderId: "107334359278",
+  appId: "1:107334359278:web:374bb9c60bd56ab897fbff",
+  measurementId: "G-JR53TN6F4K",
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+// Variables globales de datos
+window.books = [];
+window.users = [];
+window.loans = [];
+window.currentUser = null;
+window.currentRole = "Estudiante";
+
+// ---- Roles (deben coincidir con las reglas de Firestore) ----
+const ROLE_ALIAS = { admin: "Product Owner / Coord.", librarian: "Bibliotecario", student: "Estudiante", teacher: "Docente" };
+const VALID_ROLES = ["Product Owner / Coord.", "Bibliotecario", "Estudiante", "Docente"];
+const normRole = (r) => ROLE_ALIAS[r] || r;
+const isAdminRole = (r) => r === "Product Owner / Coord.";
+const isStaffRole = (r) => r === "Product Owner / Coord." || r === "Bibliotecario";
+const fsMsg = (e) =>
+  e && e.code === "permission-denied"
+    ? "No tienes permiso para realizar esta acción"
+    : (e && e.message) || "Error inesperado";
+
+// Libros de ejemplo (solo los carga un administrador si el catálogo está vacío)
+const INITIAL_BOOKS = [
+  { code: "LIB-001", title: "Cien Años de Soledad", author: "Gabriel García Márquez", category: "Literatura", copies: 4, available: 3, cover: "📕" },
+  { code: "LIB-002", title: "Clean Code & Agile Development", author: "Robert C. Martin", category: "Ingeniería", copies: 5, available: 5, cover: "💻" },
+  { code: "LIB-003", title: "El Principito", author: "Antoine de Saint-Exupéry", category: "Literatura", copies: 3, available: 2, cover: "📘" },
+  { code: "LIB-004", title: "Patrones de Diseño Software", author: "Erich Gamma et al.", category: "Ingeniería", copies: 2, available: 1, cover: "⚙️" },
+  { code: "LIB-005", title: "Breve Historia del Tiempo", author: "Stephen Hawking", category: "Ciencias", copies: 3, available: 3, cover: "🌌" },
+];
+
+// 40 libros adicionales: [título, autor, categoría, copias, portada]
+const EXTRA_BOOKS = [
+  ["Introducción a los Algoritmos", "Thomas H. Cormen et al.", "Ingeniería", 4, "💻"],
+  ["El Programador Pragmático", "Andrew Hunt y David Thomas", "Ingeniería", 3, "💻"],
+  ["Arquitectura Limpia", "Robert C. Martin", "Ingeniería", 3, "⚙️"],
+  ["Refactoring", "Martin Fowler", "Ingeniería", 3, "⚙️"],
+  ["Fundamentos de Sistemas de Bases de Datos", "Ramez Elmasri y Shamkant Navathe", "Ingeniería", 4, "💻"],
+  ["Redes de Computadoras", "Andrew S. Tanenbaum", "Ingeniería", 3, "⚙️"],
+  ["Ingeniería de Software", "Ian Sommerville", "Ingeniería", 5, "💻"],
+  ["Sistemas Operativos Modernos", "Andrew S. Tanenbaum", "Ingeniería", 3, "⚙️"],
+  ["Inteligencia Artificial: Un Enfoque Moderno", "Stuart Russell y Peter Norvig", "Ingeniería", 3, "💻"],
+  ["Scrum: El Arte de Hacer el Doble de Trabajo en la Mitad de Tiempo", "Jeff Sutherland", "Ingeniería", 4, "⚙️"],
+  ["Don Quijote de la Mancha", "Miguel de Cervantes", "Literatura", 4, "📕"],
+  ["Rayuela", "Julio Cortázar", "Literatura", 3, "📗"],
+  ["Pedro Páramo", "Juan Rulfo", "Literatura", 3, "📘"],
+  ["La Casa de los Espíritus", "Isabel Allende", "Literatura", 3, "📕"],
+  ["El Amor en los Tiempos del Cólera", "Gabriel García Márquez", "Literatura", 4, "📗"],
+  ["Crónica de una Muerte Anunciada", "Gabriel García Márquez", "Literatura", 3, "📘"],
+  ["Ficciones", "Jorge Luis Borges", "Literatura", 2, "📕"],
+  ["La Ciudad y los Perros", "Mario Vargas Llosa", "Literatura", 2, "📗"],
+  ["1984", "George Orwell", "Literatura", 5, "📘"],
+  ["Fahrenheit 451", "Ray Bradbury", "Literatura", 3, "📕"],
+  ["Orgullo y Prejuicio", "Jane Austen", "Literatura", 3, "📗"],
+  ["Los Miserables", "Victor Hugo", "Literatura", 2, "📘"],
+  ["El Origen de las Especies", "Charles Darwin", "Ciencias", 3, "🌌"],
+  ["Cosmos", "Carl Sagan", "Ciencias", 4, "🌌"],
+  ["El Gen Egoísta", "Richard Dawkins", "Ciencias", 3, "🧬"],
+  ["Una Breve Historia de Casi Todo", "Bill Bryson", "Ciencias", 3, "🌌"],
+  ["Física para la Ciencia y la Tecnología", "Paul A. Tipler", "Ciencias", 4, "🧬"],
+  ["Química", "Raymond Chang", "Ciencias", 4, "🧬"],
+  ["Biología", "Neil A. Campbell", "Ciencias", 4, "🧬"],
+  ["El Universo Elegante", "Brian Greene", "Ciencias", 2, "🌌"],
+  ["Los Dragones del Edén", "Carl Sagan", "Ciencias", 2, "🌌"],
+  ["Sapiens: De Animales a Dioses", "Yuval Noah Harari", "Historia", 5, "🏛️"],
+  ["Armas, Gérmenes y Acero", "Jared Diamond", "Historia", 3, "🏛️"],
+  ["Las Venas Abiertas de América Latina", "Eduardo Galeano", "Historia", 3, "📜"],
+  ["Los Cañones de Agosto", "Barbara W. Tuchman", "Historia", 2, "📜"],
+  ["El Diario de Ana Frank", "Ana Frank", "Historia", 4, "📜"],
+  ["SPQR: Una Historia de la Antigua Roma", "Mary Beard", "Historia", 2, "🏛️"],
+  ["La Segunda Guerra Mundial", "Antony Beevor", "Historia", 3, "📜"],
+  ["El Mundo de Ayer", "Stefan Zweig", "Historia", 2, "🏛️"],
+  ["Una Historia del Mundo en 100 Objetos", "Neil MacGregor", "Historia", 3, "🏛️"],
+];
+const CATALOG = [
+  ...INITIAL_BOOKS,
+  ...EXTRA_BOOKS.map(([title, author, category, copies, cover], i) => ({
+    code: `LIB-${String(INITIAL_BOOKS.length + i + 1).padStart(3, "0")}`,
+    title, author, category, copies, available: copies, cover,
+  })),
+];
+
+// Agrega al catálogo los libros que aún no existen (se compara por código). Solo administradores.
+async function seedBooksIfMissing() {
+  try {
+    const snap = await getDocs(collection(db, "books"));
+    const existing = new Set(snap.docs.map((d) => d.data().code));
+    const missing = CATALOG.filter((b) => !existing.has(b.code));
+    if (missing.length === 0) return;
+    const batch = writeBatch(db);
+    missing.forEach((b) => batch.set(doc(collection(db, "books")), b));
+    await batch.commit();
+    showToast(`${missing.length} libros agregados al catálogo`);
+  } catch (e) {
+    console.error("No se pudieron cargar los libros del catálogo:", e);
+  }
+}
+
+// ---- LISTENERS EN TIEMPO REAL (solo con sesión iniciada) ----
+let unsubs = [];
+function stopListeners() {
+  unsubs.forEach((u) => u());
+  unsubs = [];
+  window.books = [];
+  window.users = [];
+  window.loans = [];
+}
+function startListeners(role, uid) {
+  const onErr = (e) => console.error("Firestore:", e);
+  unsubs.push(onSnapshot(collection(db, "books"), (snapshot) => {
+    window.books = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    renderBooks();
+    updateStats();
+  }, onErr));
+
+  // El personal ve todos los préstamos; los demás solo los propios
+  const loansQ = isStaffRole(role)
+    ? collection(db, "loans")
+    : query(collection(db, "loans"), where("userId", "==", uid));
+  unsubs.push(onSnapshot(loansQ, (snapshot) => {
+    window.loans = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    renderLoans();
+    updateStats();
+  }, onErr));
+
+  // Solo el personal puede leer la lista completa de usuarios
+  if (isStaffRole(role)) {
+    unsubs.push(onSnapshot(collection(db, "users"), (snapshot) => {
+      window.users = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      renderUsers();
+      updateStats();
+    }, onErr));
+  }
+}
+
+// ---- AUTENTICACIÓN ----
+window.fbLogin = (email, password) => signInWithEmailAndPassword(auth, email, password);
+window.fbLogout = () => signOut(auth);
+
+onAuthStateChanged(auth, async (user) => {
+  stopListeners();
+  if (!user) {
+    window.currentUser = null;
+    window.currentRole = "Estudiante";
+    document.getElementById("modal-login").classList.remove("hidden");
+    return;
+  }
+  try {
+    // El rol se obtiene SIEMPRE del perfil en Firestore (users/{uid}), nunca del texto del correo
+    const snap = await getDoc(doc(db, "users", user.uid));
+    if (!snap.exists()) {
+      showLoginError("Tu cuenta no tiene un perfil asignado en el sistema. Contacta al administrador.");
+      await signOut(auth);
+      return;
+    }
+    const profile = snap.data();
+    const role = normRole(profile.role);
+    if (!VALID_ROLES.includes(role) || profile.status === "Inactivo") {
+      showLoginError("Tu cuenta no tiene un rol válido o está inactiva.");
+      await signOut(auth);
+      return;
+    }
+    window.currentUser = { id: user.uid, ...profile, role, email: user.email };
+    window.currentRole = role;
+    document.getElementById("login-error").classList.add("hidden");
+    document.getElementById("modal-login").classList.add("hidden");
+    applyRolePermissions();
+    startListeners(role, user.uid);
+    if (isAdminRole(role)) seedBooksIfMissing();
+    showToast(`Bienvenido: ${window.currentUser.name || user.email} (${role})`);
+  } catch (e) {
+    console.error(e);
+    showLoginError("No se pudo verificar tu perfil: " + fsMsg(e));
+    await signOut(auth);
+  }
+});
+
+// ---- USUARIOS ----
+// Crea la cuenta en Authentication con una app secundaria (no cierra la sesión del administrador)
+// y guarda el perfil en users/{uid}.
+window.handleAddUserFS = async (userData, password) => {
+  let secApp, cred;
+  try {
+    secApp = initializeApp(firebaseConfig, "Secondary-" + Date.now());
+    const secAuth = getAuth(secApp);
+    cred = await createUserWithEmailAndPassword(secAuth, userData.email, password);
+    await signOut(secAuth);
+    await setDoc(doc(db, "users", cred.user.uid), userData);
+    showToast("Usuario registrado correctamente");
+  } catch (e) {
+    console.error(e);
+    if (cred) showToast("La cuenta se creó pero no se pudo guardar el perfil: " + fsMsg(e));
+    else showToast(e.code === "auth/email-already-in-use" ? "Ese correo ya está registrado" : fsMsg(e));
+  }
+};
+
+window.handleDeleteUserFS = async (userId) => {
+  if (window.currentUser && userId === window.currentUser.id) {
+    showToast("No puedes eliminar tu propio usuario");
+    return;
+  }
+  try {
+    await deleteDoc(doc(db, "users", userId));
+    showToast("Perfil de usuario eliminado (pierde el acceso al sistema)");
+  } catch (e) {
+    showToast(fsMsg(e));
+  }
+};
+
+// ---- LIBROS ----
+window.handleAddBookFS = async (bookData) => {
+  try {
+    await setDoc(doc(collection(db, "books")), bookData);
+    showToast("Libro guardado en Firestore en tiempo real");
+  } catch (e) {
+    showToast(fsMsg(e));
+  }
+};
+
+// ---- PRÉSTAMOS (transacción atómica) ----
+window.handleCreateLoanFS = async (bookId, targetUid) => {
+  const me = window.currentUser;
+  if (!me) return showToast("Debes iniciar sesión");
+  // Un usuario sin rol de personal solo puede pedir préstamos para sí mismo
+  const uid = isStaffRole(window.currentRole) && targetUid ? targetUid : me.id;
+  const target = uid === me.id ? me : (window.users || []).find((u) => u.id === uid);
+  if (!target) return showToast("Usuario no válido");
+
+  const bookRef = doc(db, "books", bookId);
+  const loanRef = doc(collection(db, "loans"));
+  try {
+    const title = await runTransaction(db, async (tx) => {
+      const snap = await tx.get(bookRef);
+      if (!snap.exists()) throw new Error("El libro no existe");
+      const book = snap.data();
+      if (!(book.available > 0)) throw new Error("El libro no se encuentra disponible actualmente");
+      tx.update(bookRef, { available: book.available - 1 });
+      tx.set(loanRef, {
+        code: `PRE-${Math.floor(800 + Math.random() * 100)}`,
+        bookDocId: bookId,
+        bookTitle: book.title,
+        user: target.name,
+        userId: uid,
+        date: new Date().toISOString().split("T")[0],
+        status: "Activo",
+      });
+      return book.title;
+    });
+    showToast(`Préstamo registrado para ${title}`);
+  } catch (e) {
+    showToast(fsMsg(e));
+  }
+};
+
+window.handleReturnLoanFS = async (loanId) => {
+  const loanRef = doc(db, "loans", loanId);
+  try {
+    const title = await runTransaction(db, async (tx) => {
+      const loanSnap = await tx.get(loanRef);
+      if (!loanSnap.exists()) throw new Error("El préstamo no existe");
+      const loan = loanSnap.data();
+      if (loan.status !== "Activo") throw new Error("Este préstamo ya fue devuelto");
+      if (!loan.bookDocId) throw new Error("El préstamo no está vinculado a un libro");
+      const bookRef = doc(db, "books", loan.bookDocId);
+      const bookSnap = await tx.get(bookRef);
+      if (!bookSnap.exists()) throw new Error("El libro del préstamo ya no existe");
+      const book = bookSnap.data();
+      if (book.available + 1 > book.copies) throw new Error("Inconsistencia de inventario: revisa las copias del libro");
+      tx.update(loanRef, { status: "Devuelto", returnDate: new Date().toISOString().split("T")[0] });
+      tx.update(bookRef, { available: book.available + 1 });
+      return loan.bookTitle;
+    });
+    showToast(`Devolución procesada para: ${title}`);
+  } catch (e) {
+    showToast(fsMsg(e));
+  }
+};
+</script>
+
+<!-- UI INTERACTION & RENDER SCRIPTS -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  initCharts();
+});
+
+// MANEJO DE AUTENTICACIÓN / LOGIN Y ROLES
+function showLoginError(msg) {
+  document.getElementById("login-error-msg").textContent = msg;
+  document.getElementById("login-error").classList.remove("hidden");
+  document.getElementById("modal-login").classList.remove("hidden");
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  document.getElementById("login-error").classList.add("hidden");
+  const email = document.getElementById("login-email").value.trim();
+  const password = document.getElementById("login-password").value;
+  try {
+    // El acceso, la carga del rol y el cierre del modal los gestiona onAuthStateChanged
+    await window.fbLogin(email, password);
+  } catch (err) {
+    const code = err && err.code;
+    let msg = "Correo o contraseña incorrectos.";
+    if (code === "auth/too-many-requests") msg = "Demasiados intentos fallidos. Inténtalo más tarde.";
+    else if (code === "auth/network-request-failed") msg = "Error de red. Revisa tu conexión.";
+    else if (code === "auth/invalid-email") msg = "El correo electrónico no es válido.";
+    else if (code === "auth/user-disabled") msg = "Esta cuenta está deshabilitada.";
+    showLoginError(msg);
+  }
+}
+
+function fillDemoCredentials(email) {
+  document.getElementById("login-email").value = email;
+  document.getElementById("login-password").value = "";
+  document.getElementById("login-password").focus();
+}
+
+async function handleLogout() {
+  try {
+    await window.fbLogout();
+  } catch (e) {
+    console.error(e);
+  }
+  document.getElementById("login-email").value = "";
+  document.getElementById("login-password").value = "";
+  document.getElementById("login-error").classList.add("hidden");
+  showToast("Sesión cerrada");
+}
+
+// APLICAR RESTRICCIONES Y PERMISOS SEGÚN EL ROL AUTENTICADO
+function applyRolePermissions() {
+  const role = window.currentRole;
+
+  // Actualizar UI del Header
+  document.getElementById("current-user-display").textContent = window.currentUser ? window.currentUser.name : "Invitado";
+  document.getElementById("current-role-name").textContent = role;
+
+  // Pestañas
+  const tabScrum = document.getElementById("tab-btn-scrum");
+  const tabBooks = document.getElementById("tab-btn-books");
+  const tabLoans = document.getElementById("tab-btn-loans");
+  const tabReports = document.getElementById("tab-btn-reports");
+  const tabUsers = document.getElementById("tab-btn-users");
+
+  // Botones de Acción
+  const btnAddBook = document.getElementById("btn-add-book");
+  const btnNewLoan = document.getElementById("btn-new-loan");
+  const btnAddUser = document.getElementById("btn-add-user");
+  const btnCompleteHU4 = document.getElementById("btn-complete-hu4");
+
+  // REGLAS DE PERMISOS POR ROL (la seguridad real la aplican las reglas de Firestore)
+  if (role === "Estudiante" || role === "Docente") {
+    tabUsers.classList.add("hidden");
+    tabReports.classList.add("hidden");
+    tabScrum.classList.add("hidden");
+
+    tabBooks.classList.remove("hidden");
+    tabLoans.classList.remove("hidden");
+
+    if (btnAddBook) btnAddBook.classList.add("hidden");
+    if (btnNewLoan) btnNewLoan.classList.add("hidden");
+    if (btnAddUser) btnAddUser.classList.add("hidden");
+    if (btnCompleteHU4) btnCompleteHU4.classList.add("hidden");
+
+    switchTab("books");
+  } else if (role === "Bibliotecario") {
+    tabUsers.classList.add("hidden");
+    tabScrum.classList.add("hidden");
+
+    tabBooks.classList.remove("hidden");
+    tabLoans.classList.remove("hidden");
+    tabReports.classList.remove("hidden");
+
+    if (btnAddBook) btnAddBook.classList.remove("hidden");
+    if (btnNewLoan) btnNewLoan.classList.remove("hidden");
+    if (btnAddUser) btnAddUser.classList.add("hidden");
+    if (btnCompleteHU4) btnCompleteHU4.classList.add("hidden");
+
+    switchTab("books");
+  } else {
+    // Admin / Product Owner / Coord. / Scrum Master tiene acceso total
+    tabScrum.classList.remove("hidden");
+    tabBooks.classList.remove("hidden");
+    tabLoans.classList.remove("hidden");
+    tabReports.classList.remove("hidden");
+    tabUsers.classList.remove("hidden");
+
+    if (btnAddBook) btnAddBook.classList.remove("hidden");
+    if (btnNewLoan) btnNewLoan.classList.remove("hidden");
+    if (btnAddUser) btnAddUser.classList.remove("hidden");
+    if (btnCompleteHU4) btnCompleteHU4.classList.remove("hidden");
+
+    switchTab("scrum");
+  }
+
+  // Re-renderizar elementos con acciones sensibles según rol
+  renderBooks();
+  renderLoans();
+  renderUsers();
+}
+
+// TAB SWITCHER
+function switchTab(tab) {
+  const tabs = ["scrum", "books", "loans", "reports", "users"];
+  tabs.forEach((t) => {
+    const view = document.getElementById(`view-${t}`);
+    const btn = document.getElementById(`tab-btn-${t}`);
+    if (!view || !btn) return;
+
+    if (t === tab) {
+      view.classList.remove("hidden");
+      btn.className = "px-4 py-2 rounded-lg transition-all text-white bg-blue-600 shadow shrink-0";
+    } else {
+      view.classList.add("hidden");
+      btn.className = "px-4 py-2 rounded-lg transition-all text-slate-300 hover:text-white hover:bg-slate-700 shrink-0";
+    }
+  });
+}
+
+// RENDER BOOKS
+function renderBooks(filteredBooks = window.books) {
+  const grid = document.getElementById("books-grid");
+  if (!grid) return;
+  grid.innerHTML = "";
+
+  if (!filteredBooks || filteredBooks.length === 0) {
+    grid.innerHTML = `<div class="col-span-full text-center py-8 text-slate-400">No se encontraron libros.</div>`;
+    return;
+  }
+
+  filteredBooks.forEach((b) => {
+    const card = document.createElement("div");
+    card.className = "bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition flex flex-col justify-between";
+    card.innerHTML = `
+    <div>
+      <div class="flex justify-between items-start mb-3">
+        <span class="text-3xl">${b.cover || "📘"}</span>
+        <span class="text-xs font-bold px-2.5 py-0.5 rounded-full ${b.available > 0 ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}">
+          ${b.available > 0 ? `${b.available} disponibles` : "Agotado"}
+        </span>
+      </div>
+      <h3 class="font-bold text-slate-800 text-base leading-snug">${b.title}</h3>
+      <p class="text-xs text-slate-500 mt-1"><i class="fa-solid fa-pen-nib mr-1"></i>${b.author}</p>
+      <span class="inline-block mt-2 text-[11px] font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded">${b.category}</span>
+    </div>
+
+    <div class="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center text-xs">
+      <span class="text-slate-400">ID: ${b.code || b.id.substring(0, 6)}</span>
+      <button onclick="requestLoanDirect('${b.id}')" ${b.available === 0 ? "disabled" : ""} class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-lg font-bold transition">
+        Pedir Préstamo
+      </button>
+    </div>
+  `;
+    grid.appendChild(card);
+  });
+}
+
+function filterBooks() {
+  const q = document.getElementById("search-book-input").value.toLowerCase();
+  const filtered = (window.books || []).filter(
+    (b) =>
+      b.title.toLowerCase().includes(q) ||
+      b.author.toLowerCase().includes(q) ||
+      b.category.toLowerCase().includes(q),
+  );
+  renderBooks(filtered);
+}
+
+// RENDER LOANS
+function renderLoans() {
+  const tbody = document.getElementById("loans-table-body");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  const isAuthorizedToReturn =
+    window.currentRole === "Bibliotecario" ||
+    window.currentRole.includes("Admin") ||
+    window.currentRole.includes("Product Owner");
+
+  (window.loans || []).forEach((l) => {
+    const tr = document.createElement("tr");
+    tr.className = "hover:bg-slate-50/80 transition";
+    tr.innerHTML = `
+    <td class="p-3 font-bold text-blue-600">${l.code || l.id.substring(0, 6)}</td>
+    <td class="p-3 font-medium text-slate-800">${l.bookTitle}</td>
+    <td class="p-3 text-slate-600">${l.user}</td>
+    <td class="p-3 text-slate-500">${l.date}</td>
+    <td class="p-3">
+      <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${l.status === "Activo" ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}">
+        ${l.status}
+      </span>
+    </td>
+    <td class="p-3 text-right">
+      ${
+        l.status === "Activo"
+          ? isAuthorizedToReturn
+            ? `<button onclick="window.handleReturnLoanFS('${l.id}')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition shadow">Registrar Devolución</button>`
+            : '<span class="text-amber-600 text-xs font-semibold">En Curso</span>'
+          : '<span class="text-slate-400 text-xs">Entregado</span>'
+      }
+    </td>
+  `;
+    tbody.appendChild(tr);
+  });
+}
+
+// RENDER USERS
+function renderUsers() {
+  const grid = document.getElementById("users-grid");
+  if (!grid) return;
+  grid.innerHTML = "";
+
+  const isAdmin =
+    window.currentRole.includes("Admin") ||
+    window.currentRole.includes("Product Owner");
+
+  (window.users || []).forEach((u) => {
+    const card = document.createElement("div");
+    card.className = "bg-white p-4 rounded-xl border border-slate-200 flex items-center space-x-3 relative group";
+    card.innerHTML = `
+    <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-base shrink-0">
+      ${u.name ? u.name.charAt(0) : "U"}
+    </div>
+    <div class="flex-grow pr-6">
+      <h4 class="font-bold text-sm text-slate-800">${u.name}</h4>
+      <p class="text-xs text-slate-500">${u.email}</p>
+      <span class="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">${u.role}</span>
+    </div>
+    ${
+      isAdmin
+        ? `
+    <button 
+      onclick="window.handleDeleteUserFS('${u.id}')"
+      title="Eliminar usuario"
+      class="absolute top-3 right-3 text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition"
+    >
+      <i class="fa-solid fa-trash-can text-sm"></i>
+    </button>
+    `
+        : ""
+    }
+  `;
+    grid.appendChild(card);
+  });
+}
+
+// ACCIÓN DIRECTA DE SOLICITAR PRÉSTAMO (siempre a nombre del usuario autenticado)
+function requestLoanDirect(bookId) {
+  window.handleCreateLoanFS(bookId);
+}
+
+// MODAL CONTROLS
+function openAddBookModal() {
+  document.getElementById("modal-add-book").classList.remove("hidden");
+}
+function openAddUserModal() {
+  document.getElementById("modal-add-user").classList.remove("hidden");
+}
+function openNewLoanModal() {
+  const bookSel = document.getElementById("loan-book-select");
+  const userSel = document.getElementById("loan-user-select");
+
+  bookSel.innerHTML = (window.books || [])
+    .filter((b) => b.available > 0)
+    .map((b) => `<option value="${b.id}">${b.title} (${b.available} disp.)</option>`)
+    .join("");
+
+  // El valor es el UID del usuario (ID del documento en users)
+  userSel.innerHTML = (window.users || [])
+    .map((u) => `<option value="${u.id}">${u.name} (${u.role})</option>`)
+    .join("");
+
+  document.getElementById("modal-new-loan").classList.remove("hidden");
+}
+function closeModal(id) {
+  document.getElementById(id).classList.add("hidden");
+  const form = document.querySelector(`#${id} form`);
+  if (form) form.reset();
+}
+
+// FORM SUBMITS
+function handleAddBook(e) {
+  e.preventDefault();
+  const copies = parseInt(document.getElementById("new-book-copies").value);
+  const bookData = {
+    code: `LIB-${String((window.books || []).length + 1).padStart(3, "0")}`,
+    title: document.getElementById("new-book-title").value,
+    author: document.getElementById("new-book-author").value,
+    category: document.getElementById("new-book-category").value,
+    copies: copies,
+    available: copies,
+    cover: "📘",
+  };
+  window.handleAddBookFS(bookData);
+  closeModal("modal-add-book");
+}
+
+function handleAddUser(e) {
+  e.preventDefault();
+  const userData = {
+    name: document.getElementById("new-user-name").value,
+    email: document.getElementById("new-user-email").value.trim(),
+    role: document.getElementById("new-user-role").value,
+    status: "Activo",
+  };
+  const password = document.getElementById("new-user-password").value;
+  window.handleAddUserFS(userData, password);
+  closeModal("modal-add-user");
+}
+
+function handleNewLoan(e) {
+  e.preventDefault();
+  const bookId = document.getElementById("loan-book-select").value;
+  const userId = document.getElementById("loan-user-select").value;
+  window.handleCreateLoanFS(bookId, userId);
+  closeModal("modal-new-loan");
+}
+
+function completeHU4() {
+  const card = document.getElementById("card-hu4");
+  if (!card) return;
+
+  document.getElementById("done-col").appendChild(card);
+  document.getElementById("in-progress-count").textContent = "0";
+  document.getElementById("done-count").textContent = "3";
+
+  const sprint3Badge = document.getElementById("sprint3-badge");
+  sprint3Badge.textContent = "Completado";
+  sprint3Badge.className = "text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full";
+
+  card.className = "bg-white p-3.5 rounded-xl border border-emerald-200 shadow-sm border-l-4 border-l-emerald-500";
+  card.querySelector(".flex.justify-between.items-center.mt-2").innerHTML = `
+    <span class="text-emerald-600 font-semibold">Sprint 3</span>
+    <i class="fa-solid fa-circle-check text-emerald-600"></i>
+  `;
+
+  showToast("HU4 marcada como completada exitosamente");
+}
+
+function updateStats() {
+  const totalBooksEl = document.getElementById("stat-total-books");
+  const activeLoansEl = document.getElementById("stat-active-loans");
+  const totalUsersEl = document.getElementById("stat-total-users");
+
+  if (totalBooksEl) {
+    totalBooksEl.textContent = (window.books || []).reduce((acc, b) => acc + (b.copies || 0), 0);
+  }
+  if (activeLoansEl) {
+    activeLoansEl.textContent = (window.loans || []).filter((l) => l.status === "Activo").length;
+  }
+  if (totalUsersEl) {
+    totalUsersEl.textContent = (window.users || []).length;
+  }
+}
+
+function initCharts() {
+  const ctxCat = document.getElementById("categoryChart");
+  if (ctxCat) {
+    new Chart(ctxCat.getContext("2d"), {
+      type: "doughnut",
+      data: {
+        labels: ["Ingeniería", "Literatura", "Ciencias"],
+        datasets: [{ data: [45, 35, 20], backgroundColor: ["#2563eb", "#10b981", "#f59e0b"] }],
+      },
+      options: { responsive: true, maintainAspectRatio: false },
+    });
+  }
+
+  const ctxBurn = document.getElementById("burndownChart");
+  if (ctxBurn) {
+    new Chart(ctxBurn.getContext("2d"), {
+      type: "line",
+      data: {
+        labels: ["Día 1", "Día 3", "Día 5", "Día 7", "Día 10"],
+        datasets: [
+          { label: "Ideal", data: [27, 20, 14, 7, 0], borderColor: "#cbd5e1", borderDash: [5, 5] },
+          { label: "Real (Biblioteca)", data: [27, 22, 12, 5, 0], borderColor: "#2563eb", fill: true, backgroundColor: "rgba(37, 99, 235, 0.05)" },
+        ],
+      },
+      options: { responsive: true, maintainAspectRatio: false },
+    });
+  }
+}
+
+function simulateDailyScrum() {
+  document.getElementById("modal-daily").classList.remove("hidden");
+}
+
+function showToast(msg) {
+  const toast = document.getElementById("toast");
+  if (!toast) return;
+  document.getElementById("toast-msg").textContent = msg;
+  toast.classList.remove("hidden");
+  setTimeout(() => toast.classList.add("hidden"), 3000);
+}
+</script>
+</body>
+</html>
